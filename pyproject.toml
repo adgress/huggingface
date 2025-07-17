@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "huggingface-training"
+version = "0.1.0"
+description = "A Python package for training Hugging Face models on Google Cloud Vertex AI"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "transformers>=4.21.0",
+    "datasets>=2.0.0",
+    "tokenizers>=0.13.0",
+    "huggingface_hub>=0.15.0",
+    "torch>=1.12.0",
+    "torchvision>=0.13.0",
+    "torchaudio>=0.12.0",
+    "accelerate>=0.20.0",
+    "evaluate>=0.4.0",
+    "numpy>=1.21.0",
+    "pandas>=1.3.0",
+    "Pillow>=9.0.0",
+    "tqdm>=4.64.0",
+    "requests>=2.28.0",
+    "google-cloud-aiplatform>=1.38.0",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-mock>=3.10.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.950",
+    "isort>=5.10.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-mock>=3.10.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/adgress/huggingface"
+Repository = "https://github.com/adgress/huggingface"
+Issues = "https://github.com/adgress/huggingface/issues"
+
+[project.scripts]
+hf-train = "huggingface_training.train:main"
+hf-vertex-submit = "huggingface_training.vertex_submit:main"
+
+[tool.setuptools]
+packages = ["huggingface_training"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
