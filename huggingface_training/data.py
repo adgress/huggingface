@@ -1,12 +1,13 @@
-from datasets import load_dataset, Image
+from datasets import load_dataset, DatasetDict, Image
 from torch.utils.data import DataLoader
 from transformers import AutoImageProcessor
 
 
-def load_huggingface_dataset(name):
+def load_huggingface_dataset(name) -> DatasetDict:
     """Load a dataset from the Hugging Face Hub."""
     try:
         dataset = load_dataset(name)
+        assert isinstance(dataset, DatasetDict), "Loaded dataset is not a DatasetDict"
         print(f"Dataset '{name}' loaded successfully.")
         return dataset
     except Exception as e:
@@ -14,7 +15,7 @@ def load_huggingface_dataset(name):
         raise ValueError(f"Failed to load dataset '{name}': {e}")
 
 
-def load_beans_dataset():
+def load_beans_dataset() -> DatasetDict:
     """Load the beans dataset from Hugging Face"""
     return load_huggingface_dataset("AI-Lab-Makerere/beans")
 
