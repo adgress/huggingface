@@ -26,6 +26,7 @@ tensorboard>=2.0
 
 # Google Cloud
 google-cloud-aiplatform>=1.38.0
+google-cloud-logging>=3.8.0
 
 # Testing
 pytest>=7.0.0

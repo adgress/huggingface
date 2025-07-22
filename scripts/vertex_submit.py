@@ -47,10 +47,12 @@ if not huggingface_token:
 
 job.run(
     args=[],  # CLI args to pass to train.py
-    # machine_type="a2-highgpu-1g",   
-    # accelerator_type="NVIDIA_TESLA_A100",
-    machine_type="n1-standard-4",
-    accelerator_type="NVIDIA_TESLA_T4",  # Use V100 for better compatibility
+    machine_type="a2-highgpu-1g",   
+    accelerator_type="NVIDIA_TESLA_A100",
+    
+    # Logging doesn't work on these machines
+    # machine_type="n1-standard-4",
+    # accelerator_type="NVIDIA_TESLA_T4",  # Use V100 for better compatibility
     accelerator_count=1,
     replica_count=1,
     tensorboard="projects/82783227389/locations/us-central1/tensorboards/5185257254173016064",

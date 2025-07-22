@@ -17,6 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 accuracy_metric = load("accuracy")
+logger = logging.getLogger(__name__)
 
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
@@ -35,7 +36,9 @@ def compute_metrics(eval_pred):
         f"accuracy_class_{label}": per_class_correct[label] / per_class_total[label]
         for label in per_class_total
     }
-    return overall_accuracy | per_class_accuracy
+    metrics = overall_accuracy | per_class_accuracy
+    logger.info("Logging metrics:", metrics)
+    return metrics
 
 
 def setup_training(
@@ -73,13 +76,15 @@ def setup_training(
         per_device_eval_batch_size=batch_size,
         save_steps=10,
         num_train_epochs=2,
-        eval_strategy="epoch",
+        eval_strategy="steps",
+        eval_steps=1,
         save_strategy="epoch",
         logging_strategy="steps",
-        logging_steps=10,
+        logging_steps=1,
+        
         # logging_dir="./logs",
         logging_dir=log_path,
-        report_to="tensorboard"  # Optional: report to TensorBoard
+        report_to=["tensorboard"]  # Optional: report to TensorBoard
     )
     
     # Create trainer
