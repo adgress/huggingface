@@ -84,6 +84,7 @@ def setup_training(
         
         # logging_dir="./logs",
         logging_dir=log_path,
+        disable_tqdm=True,
         report_to=["tensorboard"]  # Optional: report to TensorBoard
     )
     

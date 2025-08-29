@@ -6,6 +6,7 @@ from .data import load_beans_dataset, create_image_processor, get_label_mappings
 from .model import load_huggingface_pretrained_model
 from .trainer import setup_training
 
+import google.auth
 from google.cloud import aiplatform
 
 from google.cloud.logging import Client
@@ -20,24 +21,38 @@ import sys
 def main():
     """Main training function that can be called as a console script"""
     print("Training script started...")
+    creds, proj = google.auth.default()
+    print("ADC project:", proj)  # should match the project you granted
     # Set up logging first with both Cloud Logging and stdout
-    client = Client()
-    handler = CloudLoggingHandler(client, transport=BackgroundThreadTransport)
+
+    print("GOOGLE_APPLICATION_CREDENTIALS =", os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+    creds, adc_project = google.auth.default()
+    print("ADC project from google.auth.default() =", adc_project)
+    
+    client = Client(project="helical-glass-466113-c2")
+    client.setup_logging() 
+    print("google-cloud-logging Client.project =", client.project)
+    # handler = CloudLoggingHandler(client, transport=BackgroundThreadTransport)
     
     # Configure root logger with both handlers
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    # root_logger = logging.getLogger()
+    # root_logger.setLevel(logging.INFO)
     
     # Add both handlers to root logger
-    root_logger.addHandler(handler)
-    root_logger.addHandler(logging.StreamHandler(sys.stdout))
+    # root_logger.addHandler(handler)
+    # root_logger.addHandler(logging.StreamHandler(sys.stdout))
     
     # Set up formatter for stdout handler
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    for h in root_logger.handlers:
-        if isinstance(h, logging.StreamHandler):
-            h.setFormatter(formatter)
+    # formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    # for h in root_logger.handlers:
+    #     if isinstance(h, logging.StreamHandler):
+    #         h.setFormatter(formatter)
 
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(stdout_handler)
     logger = logging.getLogger(__name__)
     logger.info("This message will appear in Cloud Logging!")
     

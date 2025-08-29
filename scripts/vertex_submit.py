@@ -3,6 +3,12 @@ import os
 import subprocess
 from google.cloud import aiplatform
 
+import shutil
+print("shutil.which('gsutil'):", shutil.which("gsutil"))
+
+
+import os
+print("os.environ['PATH']:", os.environ["PATH"])
 # === CONFIG ===
 PACKAGE_NAME = "huggingface_training"  # Name of your package (src/your_package/)
 PROJECT_ID = "helical-glass-466113-c2"  # Your GCP project ID
@@ -28,7 +34,7 @@ gcs_package_uri = f"{GCS_PACKAGE_PATH}/{tar_file}"
 
 # === STEP 2: Upload to GCS ===
 print(f"Uploading {tar_file} to {gcs_package_uri}...")
-subprocess.run(["gsutil", "cp", local_package_path, gcs_package_uri], check=True)
+subprocess.run(["gsutil", "cp", local_package_path, gcs_package_uri], check=True, shell=True)
 
 # === STEP 3: Submit to Vertex AI ===
 print("Submitting job to Vertex AI...")
