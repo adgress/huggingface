@@ -4,7 +4,7 @@ from pdb import run
 from huggingface_hub import login
 from .data import load_beans_dataset, create_image_processor, get_label_mappings
 from .model import load_huggingface_pretrained_model
-from .trainer import setup_training
+from .trainer import setup_training, upload_artifacts_to_gcs
 
 import google.auth
 from google.cloud import aiplatform
@@ -21,39 +21,30 @@ import sys
 def main():
     """Main training function that can be called as a console script"""
     print("Training script started...")
-    creds, proj = google.auth.default()
-    print("ADC project:", proj)  # should match the project you granted
-    # Set up logging first with both Cloud Logging and stdout
+    
+    logging_level = logging.INFO
+    # 1. Integrate the Python logging module with Google Cloud Logging.
+    # This ensures that all logs are captured and sent to Cloud Logging.
+    # Setting the root logger to DEBUG here will catch most logs.
+    client = Client()
+    client.setup_logging(log_level=logging_level)
 
-    print("GOOGLE_APPLICATION_CREDENTIALS =", os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
-    creds, adc_project = google.auth.default()
-    print("ADC project from google.auth.default() =", adc_project)
-    
-    client = Client(project="helical-glass-466113-c2")
-    client.setup_logging() 
-    print("google-cloud-logging Client.project =", client.project)
-    # handler = CloudLoggingHandler(client, transport=BackgroundThreadTransport)
-    
-    # Configure root logger with both handlers
-    # root_logger = logging.getLogger()
-    # root_logger.setLevel(logging.INFO)
-    
-    # Add both handlers to root logger
-    # root_logger.addHandler(handler)
-    # root_logger.addHandler(logging.StreamHandler(sys.stdout))
-    
-    # Set up formatter for stdout handler
-    # formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    # for h in root_logger.handlers:
-    #     if isinstance(h, logging.StreamHandler):
-    #         h.setFormatter(formatter)
+    # 2. Add a StreamHandler to ensure logs are also printed to the console
+    # during development, even with the Cloud Logging integration.
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging_level)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logging.getLogger().addHandler(console_handler)
 
-    stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    root_logger.addHandler(stdout_handler)
+    # 3. Explicitly set the logging level for the Vertex AI SDK.
+    # This is a good practice to control logging from specific libraries.
+    aiplatform_logger = logging.getLogger("google.cloud.aiplatform")
+    aiplatform_logger.setLevel(logging_level)
+
+    # Example usage with your code and the SDK
     logger = logging.getLogger(__name__)
+    logger.info("Initializing Vertex AI SDK...")
     logger.info("This message will appear in Cloud Logging!")
     
     # Ensure the Hugging Face Hub is logged in
@@ -113,6 +104,8 @@ def main():
     aiplatform.log_metrics(train_results.metrics)
     aiplatform.log_metrics(validation_metrics)
     aiplatform.log_metrics(test_metrics)
+    
+    upload_artifacts_to_gcs()
     aiplatform.end_run()
     logger.info("Done training and evaluation.")
 

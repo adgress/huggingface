@@ -1,6 +1,7 @@
 from collections import defaultdict
 import logging
 import os
+import subprocess
 from typing import Tuple
 import numpy as np
 from evaluate import load
@@ -14,6 +15,7 @@ from datasets import Dataset, DatasetDict
 from huggingface_training.data import prepare_datasets, create_dataloaders
 from transformers.integrations.integration_utils import TensorBoardCallback
 from torch.utils.tensorboard import SummaryWriter
+from pathlib import Path
 
 
 accuracy_metric = load("accuracy")
@@ -67,11 +69,20 @@ def setup_training(
     
     # Create dataloaders
     train_loader, val_loader, test_loader = create_dataloaders(train_ds, val_ds, test_ds, batch_size=batch_size)
+        
+    local_output = Path("/tmp/hf_outputs")
+    local_tb  = Path("/tmp/tb")
+    local_output.mkdir(parents=True, exist_ok=True)
+    local_tb.mkdir(parents=True, exist_ok=True)
 
-    log_path = f"gs://huggingface-vertex-artifacts/tensorboard/vit-experiment/{os.environ.get('VERTEX_RUN_NAME')}"
+    logger = logging.getLogger(__name__)
+    tb_log_path = os.environ.get("AIP_TENSORBOARD_LOG_DIR", "./logs")
+    logger.info("AIP_TENSORBOARD_LOG_DIR path: " + tb_log_path)
     # Set up training arguments
     training_args = TrainingArguments(
-        output_dir="./results",
+        output_dir=str(local_output),
+        logging_dir=str(local_tb),
+
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         save_steps=10,
@@ -81,10 +92,6 @@ def setup_training(
         save_strategy="epoch",
         logging_strategy="steps",
         logging_steps=1,
-        
-        # logging_dir="./logs",
-        logging_dir=log_path,
-        disable_tqdm=True,
         report_to=["tensorboard"]  # Optional: report to TensorBoard
     )
     
@@ -99,8 +106,32 @@ def setup_training(
         callbacks=[TensorBoardCallback()]
     )
         
-    writer = SummaryWriter(log_path)
+    writer = SummaryWriter(tb_log_path)
     writer.add_scalar("debug/scalar", 1.0, 0)
     writer.close()
     
     return trainer, test_ds
+
+
+def upload_artifacts_to_gcs(local_tb_dir="/tmp/tb", local_out_dir="/tmp/hf_outputs"):
+    """Call this after trainer.train() finishes."""
+    gcs_tb = os.getenv("AIP_TENSORBOARD_LOG_DIR")
+    gcs_model_dir = os.getenv("AIP_MODEL_DIR")  # also gs://...
+
+    def _rsync(local, gcs):
+        if gcs and gcs.startswith("gs://"):
+            try:
+                subprocess.run(["gsutil", "-m", "rsync", "-r", local, gcs], check=False)
+            except FileNotFoundError:
+                # fallback to python client if gsutil isn't available
+                from google.cloud import storage
+                client = storage.Client()
+                bucket_name, prefix = gcs[5:].split("/", 1)
+                bucket = client.bucket(bucket_name)
+                for p in Path(local).rglob("*"):
+                    if p.is_file():
+                        blob = bucket.blob(f"{prefix}/{p.relative_to(local)}")
+                        blob.upload_from_filename(str(p))
+
+    _rsync(local_tb_dir, gcs_tb)        # push TB logs
+    _rsync(local_out_dir, gcs_model_dir)  # push checkpoints/artifacts
