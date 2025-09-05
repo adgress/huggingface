@@ -2,7 +2,7 @@ import os
 from pdb import run
 
 from huggingface_hub import login
-from .data import load_beans_dataset, create_image_processor, get_label_mappings
+from .data import load_beans_dataset, create_image_processor
 from .model import load_huggingface_pretrained_model
 from .trainer import setup_training, upload_artifacts_to_gcs
 
@@ -67,9 +67,11 @@ def main():
         )
     aiplatform.start_run(run=os.environ.get("VERTEX_RUN_NAME"))
 
-    dataset = load_beans_dataset()
-    print(dataset)
-    id2label, label2id = get_label_mappings()
+    dataset_config = load_beans_dataset()
+    dataset = dataset_config.dataset_dict
+    print(dataset_config)
+    id2label = dataset_config.id2label
+    label2id = dataset_config.label2id
     checkpoint="google/vit-base-patch16-224-in21k"
     processor = create_image_processor(checkpoint)
     

@@ -2,12 +2,13 @@ from collections import defaultdict
 import logging
 import os
 import subprocess
-from typing import Tuple
+from typing import Dict, Optional, Tuple
 import numpy as np
 from evaluate import load
 from sklearn.metrics import accuracy_score
 from transformers import AutoImageProcessor
 from transformers.trainer import Trainer
+from transformers.trainer_callback import TrainerCallback
 from transformers.training_args import TrainingArguments
 from transformers.modeling_utils import PreTrainedModel
 from torch.utils.data import DataLoader
@@ -20,6 +21,27 @@ from pathlib import Path
 
 accuracy_metric = load("accuracy")
 logger = logging.getLogger(__name__)
+
+class TrainMetricsCallback(TrainerCallback):
+    def on_evaluate(self, args, state, control, metrics: Optional[Dict] = None, **kwargs):
+        """
+        Called after the regular evaluation on the validation set.
+        Used here to also evaluate and log metrics for the training set.
+        """
+        # Get the trainer instance from the kwargs
+        trainer = kwargs["trainer"]
+        
+        # We need to manually trigger an evaluation on the training dataset
+        # and specify the metric prefix
+        train_metrics = trainer.evaluate(
+            eval_dataset=trainer.train_dataset,
+            metric_key_prefix="train"
+        )
+        
+        # Log the training metrics
+        trainer.log(train_metrics)
+
+
 
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
@@ -47,7 +69,7 @@ def setup_training(
     dataset: DatasetDict, 
     model: PreTrainedModel, 
     processor: AutoImageProcessor, 
-    batch_size: int = 16
+    batch_size: int = 64
 ) -> Tuple[Trainer, Dataset]:
     """
     Set up the training pipeline including dataset loading, model initialization, and trainer setup.
@@ -85,13 +107,13 @@ def setup_training(
 
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
-        save_steps=10,
-        num_train_epochs=2,
+        save_steps=500,
+        num_train_epochs=20,
         eval_strategy="steps",
-        eval_steps=1,
-        save_strategy="epoch",
+        eval_steps=20,
+        save_strategy="steps",
         logging_strategy="steps",
-        logging_steps=1,
+        logging_steps=20,
         report_to=["tensorboard"]  # Optional: report to TensorBoard
     )
     
@@ -103,7 +125,7 @@ def setup_training(
         eval_dataset=val_ds,
         data_collator=None,  # Will use default collator
         compute_metrics=compute_metrics,  # Add metrics computation
-        callbacks=[TensorBoardCallback()]
+        callbacks=[TrainMetricsCallback()]
     )
         
     writer = SummaryWriter(tb_log_path)

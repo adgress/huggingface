@@ -1,9 +1,13 @@
 from datasets import load_dataset, DatasetDict, Image
+import ml_collections
+from pydantic import ConfigDict
 from torch.utils.data import DataLoader
 from transformers import AutoImageProcessor
+from ml_collections import config_dict
 
 
-def load_huggingface_dataset(name) -> DatasetDict:
+
+def _load_huggingface_dataset(name) -> DatasetDict:
     """Load a dataset from the Hugging Face Hub."""
     try:
         dataset = load_dataset(name)
@@ -15,15 +19,13 @@ def load_huggingface_dataset(name) -> DatasetDict:
         raise ValueError(f"Failed to load dataset '{name}': {e}")
 
 
-def load_beans_dataset() -> DatasetDict:
+def load_beans_dataset() -> ml_collections.ConfigDict:
     """Load the beans dataset from Hugging Face"""
-    return load_huggingface_dataset("AI-Lab-Makerere/beans")
-
-def get_label_mappings():
-    """Get the label mappings for the beans dataset"""
-    id2label = {0: "angular_leaf_spot", 1: "bean_rust", 2: "healthy"}
-    label2id = {"angular_leaf_spot": 0, "bean_rust": 1, "healthy": 2}
-    return id2label, label2id
+    cfg = config_dict.ConfigDict()
+    cfg.dataset_dict = _load_huggingface_dataset("AI-Lab-Makerere/beans");
+    cfg.id2label = {0: "angular_leaf_spot", 1: "bean_rust", 2: "healthy"}
+    cfg.label2id = {"angular_leaf_spot": 0, "bean_rust": 1, "healthy": 2}
+    return cfg
 
 def create_image_processor(checkpoint="google/vit-base-patch16-224-in21k"):
     """Create and return an image processor"""
